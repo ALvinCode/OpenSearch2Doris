@@ -1,0 +1,811 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+:root {
+  --primary: #4a6cf7;
+  --primary-dark: #3a5ae8;
+  --secondary: #f8f9fa;
+  --text: #333;
+  --text-light: #666;
+  --border: #e5e7eb;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --card-bg: #ffffff;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+body {
+  background: #f9fafb;
+  color: var(--text);
+  min-width: 700px;
+  min-height: 500px;
+  padding: 20px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+header {
+  padding-bottom: 20px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.logo svg {
+  background: rgba(74, 108, 247, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+h1 {
+  font-size: 1.6rem;
+  color: var(--primary);
+}
+
+.subtitle {
+  color: var(--text-light);
+  font-size: 0.95rem;
+  padding-left: 55px;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  padding: 15px 0;
+  margin-bottom: 10px;
+}
+
+.status-info {
+  display: flex;
+  flex-basis: 270px;
+  flex: auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.status-info svg {
+  flex-shrink: 0;
+}
+
+.btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  word-break: keep-all;
+}
+
+.btn:hover {
+  background: var(--primary-dark);
+}
+
+.btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.status-bar .btn {
+  margin-left: 8px;
+}
+
+.sql-list {
+  flex: 1;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+  padding: 15px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+  text-align: center;
+  padding: 20px;
+}
+
+.empty-state svg {
+  margin-bottom: 15px;
+}
+
+.empty-state p {
+  margin-bottom: 5px;
+  font-size: 0.95rem;
+}
+
+.sql-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.sql-item:last-child {
+  margin-bottom: 0;
+}
+
+.sql-header {
+  background: #f8f9ff;
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.sql-title {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.sql-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sql-action-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-light);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.sql-action-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.sql-action-btn.copy:hover {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.sql-action-btn.regenerate:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.sql-content {
+  position: relative;
+  min-height: 200px;
+  overflow: auto;
+  padding: 15px;
+  background: white;
+}
+
+.sql-content::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px;
+  height: 15px;
+  background: linear-gradient(
+    -45deg,
+    transparent 30%,
+    #ccc 30%,
+    #ccc 50%,
+    transparent 50%
+  );
+  cursor: se-resize;
+  z-index: 10;
+}
+
+.sql-content:hover::after {
+  background: linear-gradient(
+    -45deg,
+    transparent 30%,
+    #999 30%,
+    #999 50%,
+    transparent 50%
+  );
+}
+
+.sql-text {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  background: #fcfcff;
+}
+
+.sql-text:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
+}
+
+/* 调试模态框样式 */
+.debug-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.debug-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  max-height: 80vh;
+  width: 90%;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.debug-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debug-modal-header h3 {
+  color: var(--primary);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.debug-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-light);
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.debug-modal-close:hover {
+  background: #f3f4f6;
+}
+
+.debug-modal-body {
+  padding: 20px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.debug-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary);
+}
+
+.debug-section:last-child {
+  margin-bottom: 0;
+}
+
+.debug-section h4 {
+  color: var(--primary);
+  margin-bottom: 10px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.debug-section pre {
+  background: white;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.debug-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.debug-status.success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.debug-status.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+}
+
+.debug-status.warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.debug-modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.debug-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.debug-actions .btn {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* 代码编辑器样式 */
+.code-editor {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3e3e3e;
+}
+
+.language-selector {
+  padding: 4px 8px;
+  background: #1e1e1e;
+  color: #fff;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.format-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #0e639c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.format-btn:hover {
+  background: #1177bb;
+}
+
+.editor-wrapper {
+  position: relative;
+  display: flex;
+  height: 100%;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.line-numbers {
+  padding: 8px;
+  background: #1e1e1e;
+  color: #858585;
+  text-align: right;
+  user-select: none;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.line-numbers span {
+  display: block;
+}
+
+.editor-textarea,
+.editor-highlight {
+  position: absolute;
+  top: 0;
+  left: 40px;
+  right: 0;
+  bottom: 0;
+  padding: 8px;
+  margin: 0;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  white-space: pre;
+  overflow: auto;
+}
+
+.editor-textarea {
+  color: transparent;
+  background: transparent;
+  caret-color: white;
+  resize: none;
+  outline: none;
+  z-index: 1;
+}
+
+.editor-highlight {
+  color: #d4d4d4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.editor-highlight code {
+  display: block;
+}
+
+/* 语法高亮颜色 */
+.keyword {
+  color: #569cd6;
+}
+
+.string {
+  color: #ce9178;
+}
+
+.number {
+  color: #b5cea8;
+}
+
+.comment {
+  color: #6a9955;
+}
+
+.property {
+  color: #9cdcfe;
+}
+
+/* Toast提示 */
+.editor-toast {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+
+.editor-toast.show {
+  opacity: 1;
+}
+
+.editor-toast.success {
+  background: #4ec9b0;
+  color: white;
+}
+
+.editor-toast.error {
+  background: #f44747;
+  color: white;
+}
+
+.sql-item.fullscreen {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  background: #fff;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  padding: 32px 16px 16px 16px;
+  margin: 0 !important;
+}
+
+.sql-item.fullscreen .sql-header {
+  flex-shrink: 0;
+}
+
+.sql-item.fullscreen .sql-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  font-size: 1.2em;
+  padding: 15px;
+  background: white;
+  box-sizing: border-box;
+}
+
+.sql-item.fullscreen .sql-content::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(
+    -45deg,
+    transparent 30%,
+    #666 30%,
+    #666 50%,
+    transparent 50%
+  );
+  cursor: se-resize;
+  z-index: 10;
+}
+
+.sql-item.fullscreen .sql-content:hover::after {
+  background: linear-gradient(
+    -45deg,
+    transparent 30%,
+    #333 30%,
+    #333 50%,
+    transparent 50%
+  );
+}
+
+.sql-item.fullscreen .code-editor {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sql-item.fullscreen .editor-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  height: 100%;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+/* 浮动清除按钮样式 */
+.floating-clear-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  z-index: 1000;
+}
+
+.floating-clear-btn:hover {
+  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.floating-clear-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.3);
+  transform: none;
+}
+
+/* 关闭按钮样式 - 使用更高优先级确保生效 */
+body #doris-popup .close-popup-btn,
+#doris-popup .close-popup-btn,
+.close-popup-btn {
+  position: absolute !important;
+  top: 15px !important;
+  right: 15px !important;
+  width: 32px !important;
+  height: 32px !important;
+  background: #ff4757 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  color: white !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3) !important;
+  transition: all 0.2s ease !important;
+  line-height: 1 !important;
+}
+
+body #doris-popup .close-popup-btn:hover,
+#doris-popup .close-popup-btn:hover,
+.close-popup-btn:hover {
+  background: #ff3742 !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4) !important;
+}
+
+body #doris-popup .close-popup-btn:active,
+#doris-popup .close-popup-btn:active,
+.close-popup-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* 顶部拖拽区域样式 */
+.popup-header {
+  position: relative;
+  height: 50px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 12px 12px 0 0;
+  cursor: move;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.popup-header::before {
+  content: "⋮⋮";
+  color: #94a3b8;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.popup-header:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #dbeafe 100%);
+}
+
+.popup-header:hover::before {
+  color: #64748b;
+}
+
+.close-popup-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+/* 调整大小手柄样式 */
+.resize-handle {
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.resize-handle:active {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* 角落手柄的特殊样式 */
+.resize-nw,
+.resize-ne,
+.resize-sw,
+.resize-se {
+  background-color: rgba(59, 130, 246, 0.05) !important;
+  border-radius: 2px;
+}
+
+.resize-nw:hover,
+.resize-ne:hover,
+.resize-sw:hover,
+.resize-se:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* 边缘手柄的样式 */
+.resize-n,
+.resize-s {
+  background-color: rgba(59, 130, 246, 0.03) !important;
+}
+
+.resize-e,
+.resize-w {
+  background-color: rgba(59, 130, 246, 0.03) !important;
+}

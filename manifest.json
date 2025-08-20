@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Grafana OpenSearch to Doris SQL Converter",
+  "version": "1.0",
+  "description": "一键将Grafana OpenSearch查询转换为Doris SQL",
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": ["*://grafana-atome.advai.net/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://grafana-atome.advai.net/*"],
+      "js": ["grafana-config-extractor.js", "inline-popup.js", "sql-templates.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "popup.js", "popup.css", "code-editor.js", "sql-templates.js"],
+      "matches": ["*://grafana-atome.advai.net/*"]
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字段名替换调试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+        .result { background: #e8f5e8; border: 1px solid #28a745; padding: 15px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 字段名替换调试</h1>
+        <p>调试字段名替换逻辑，找出重复的原因。</p>
+        
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin: 10px 0;">
+            <strong>测试查询:</strong><br>
+            <code>msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")</code>
+        </div>
+        
+        <button class="button" onclick="debugFieldReplacement()">调试字段名替换</button>
+        <button class="button" onclick="clearLog()">清除日志</button>
+        
+        <div id="result" class="result" style="display: none;">
+            <h4>替换结果：</h4>
+            <pre id="result-content"></pre>
+        </div>
+        
+        <h3>调试日志：</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('log').textContent = '';
+        }
+
+        function debugFieldReplacement() {
+            clearLog();
+            log('🔍 开始调试字段名替换...');
+            
+            const query = 'msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")';
+            log(`📥 原始查询: ${query}`);
+            
+            // 模拟字段名提取和替换逻辑
+            const orPattern = /\(([^()]+)\)/g;
+            let match;
+            
+            while ((match = orPattern.exec(query)) !== null) {
+                const bracketContent = match[1];
+                log(`🔍 发现括号内容: ${bracketContent}`);
+                
+                if (bracketContent.includes(" OR ")) {
+                    const orConditions = bracketContent.split(" OR ").map(c => c.trim());
+                    log(`🔍 OR条件: ${JSON.stringify(orConditions)}`);
+                    
+                    // 提取字段名
+                    const beforeBracket = query.substring(0, match.index);
+                    const lastColonIndex = beforeBracket.lastIndexOf(":");
+                    log(`🔍 括号前内容: "${beforeBracket}"`);
+                    log(`🔍 最后一个冒号位置: ${lastColonIndex}`);
+                    
+                    let fieldName = null;
+                    if (lastColonIndex !== -1) {
+                        const beforeColon = beforeBracket.substring(0, lastColonIndex).trim();
+                        const lastSpaceIndex = beforeColon.lastIndexOf(" ");
+                        
+                        if (lastSpaceIndex !== -1) {
+                            fieldName = beforeColon.substring(lastSpaceIndex + 1).trim();
+                        } else {
+                            fieldName = beforeColon;
+                        }
+                        
+                        log(`🔍 提取的字段名: "${fieldName}"`);
+                    }
+                    
+                    // 构建替换内容
+                    let replacement;
+                    if (fieldName) {
+                        const values = orConditions.map(cond => {
+                            if (cond.startsWith('"') && cond.endsWith('"')) {
+                                return cond.substring(1, cond.length - 1);
+                            }
+                            return cond;
+                        });
+                        
+                        const regexpValue = values.join('|');
+                        replacement = `${fieldName} REGEXP "${regexpValue}"`;
+                        log(`🔍 使用REGEXP替换: ${replacement}`);
+                    }
+                    
+                    // 关键：字段名替换逻辑
+                    log(`\n🔍 字段名替换调试:`);
+                    log(`  - match.index: ${match.index}`);
+                    log(`  - lastColonIndex: ${lastColonIndex}`);
+                    
+                    if (lastColonIndex !== -1) {
+                        // 从字段名开始位置到括号开始位置，全部替换
+                        const beforeField = query.substring(0, lastColonIndex);
+                        const afterBracketText = query.substring(match.index + match[0].length);
+                        
+                        log(`  - beforeField: "${beforeField}"`);
+                        log(`  - replacement: "${replacement}"`);
+                        log(`  - afterBracketText: "${afterBracketText}"`);
+                        
+                        const finalResult = beforeField + replacement + afterBracketText;
+                        log(`  - 最终结果: "${finalResult}"`);
+                        
+                        // 显示结果
+                        document.getElementById('result-content').textContent = finalResult;
+                        document.getElementById('result').style.display = 'block';
+                        
+                        // 分析问题
+                        if (finalResult.includes('msgmsg')) {
+                            log(`🚨 发现问题：结果包含 'msgmsg'`);
+                            log(`🔍 分析：beforeField="${beforeField}", 长度=${beforeField.length}`);
+                            if (beforeField.length > 0) {
+                                log(`🔍 问题：beforeField 不为空，包含了 "${beforeField}"`);
+                            }
+                        } else {
+                            log(`✅ 替换成功，无重复字段名`);
+                        }
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('load', () => {
+            log('页面加载完成，准备调试...');
+        });
+    </script>
+</body>
+</html>

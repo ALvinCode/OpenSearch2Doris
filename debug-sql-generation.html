@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL生成调试 - 倒推问题根源</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .result {
+            background: #e8f5e8;
+            border: 1px solid #28a745;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .input-query {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .step-analysis {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>SQL生成调试 - 倒推问题根源</h1>
+        <p>从最终生成的SQL语句倒推问题产生的原因，逐步分析每个处理步骤。</p>
+        
+        <div class="input-query">
+            <strong>测试查询:</strong><br>
+            msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")
+        </div>
+        
+        <button class="test-button" onclick="debugStepByStep()">逐步调试</button>
+        <button class="test-button" onclick="showFinalSQL()">查看最终SQL</button>
+        <button class="test-button" onclick="clearDebug()">清除调试</button>
+        
+        <div id="step-analysis" class="step-analysis" style="display: none;">
+            <h4>步骤分析：</h4>
+            <div id="step-content"></div>
+        </div>
+        
+        <div id="final-sql" class="result" style="display: none;">
+            <h4>最终生成的SQL：</h4>
+            <pre id="sql-content"></pre>
+        </div>
+        
+        <div id="error-analysis" class="error" style="display: none;">
+            <h4>问题分析：</h4>
+            <div id="error-content"></div>
+        </div>
+        
+        <h3>详细调试日志：</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearDebug() {
+            document.getElementById('step-analysis').style.display = 'none';
+            document.getElementById('final-sql').style.display = 'none';
+            document.getElementById('error-analysis').style.display = 'none';
+            document.getElementById('log').textContent = '';
+        }
+
+        // 模拟字段名验证函数
+        function isValidFieldName(field) {
+            return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(field);
+        }
+
+        // 模拟KNOWN_FIELDS
+        const KNOWN_FIELDS = [
+            "datetime_local",
+            "timestamp", 
+            "application_name",
+            "project_name",
+            "logger",
+            "thread",
+            "level",
+            "bj_timestamp",
+        ];
+
+        // 逐步调试函数
+        function debugStepByStep() {
+            clearDebug();
+            log('🔍 开始逐步调试SQL生成过程...');
+            
+            const testQuery = 'msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")';
+            log(`📥 原始查询: ${testQuery}`);
+            
+            // 步骤1: 变量替换
+            log('\n📋 步骤1: 变量替换');
+            const processedQuery = testQuery.replace(/\$\{(\w+)\}/g, "${$1}");
+            log(`   处理后的查询: ${processedQuery}`);
+            
+            // 步骤2: 括号内OR逻辑处理
+            log('\n📋 步骤2: 括号内OR逻辑处理');
+            const orPattern = /\(([^()]+)\)/g;
+            let match;
+            let processedQueryAfterBrackets = processedQuery;
+            
+            while ((match = orPattern.exec(processedQuery)) !== null) {
+                const bracketContent = match[1];
+                log(`   发现括号内容: ${bracketContent}`);
+                
+                if (bracketContent.includes(" OR ")) {
+                    const orConditions = bracketContent.split(" OR ").map(c => c.trim());
+                    log(`   OR条件: ${JSON.stringify(orConditions)}`);
+                    
+                    // 提取字段名
+                    const beforeBracket = processedQuery.substring(0, match.index);
+                    const lastColonIndex = beforeBracket.lastIndexOf(":");
+                    log(`   括号前内容: "${beforeBracket}"`);
+                    log(`   最后一个冒号位置: ${lastColonIndex}`);
+                    
+                    let fieldName = null;
+                    if (lastColonIndex !== -1) {
+                        const beforeColon = beforeBracket.substring(0, lastColonIndex).trim();
+                        const lastSpaceIndex = beforeColon.lastIndexOf(" ");
+                        
+                        if (lastSpaceIndex !== -1) {
+                            fieldName = beforeColon.substring(lastSpaceIndex + 1).trim();
+                        } else {
+                            fieldName = beforeColon;
+                        }
+                        
+                        log(`   提取的字段名: "${fieldName}"`);
+                        
+                        // 验证字段名
+                        if (fieldName && (fieldName.includes(":") || fieldName.includes(" ") || fieldName.includes("("))) {
+                            log(`   ⚠️ 字段名包含特殊字符，重新处理`);
+                            const parts = beforeColon.split(" ");
+                            fieldName = parts[parts.length - 1] || null;
+                            log(`   重新提取的字段名: "${fieldName}"`);
+                        }
+                    }
+                    
+                    // 构建替换内容
+                    let replacement;
+                    if (fieldName) {
+                        const values = orConditions.map(cond => {
+                            if (cond.startsWith('"') && cond.endsWith('"')) {
+                                return cond.substring(1, cond.length - 1);
+                            }
+                            return cond;
+                        });
+                        
+                        const canUseRegexp = values.every(val => 
+                            !val.includes('*') && !val.includes('?') && !val.includes('+') && 
+                            !val.includes('[') && !val.includes(']') && !val.includes('|')
+                        );
+                        
+                        if (canUseRegexp) {
+                            const regexpValue = values.join('|');
+                            replacement = `${fieldName} REGEXP "${regexpValue}"`;
+                            log(`   使用REGEXP替换: ${replacement}`);
+                        } else {
+                            const dorisOrConditions = values.map(value => 
+                                `${fieldName} MATCH_PHRASE("${value}")`
+                            );
+                            replacement = `(${dorisOrConditions.join(" OR ")})`;
+                            log(`   使用OR组合替换: ${replacement}`);
+                        }
+                    } else {
+                        log(`   ❌ 未找到有效字段名`);
+                        replacement = `(${orConditions.join(" OR ")})`;
+                    }
+                    
+                    // 替换括号内容
+                    const originalBracket = match[0];
+                    const beforeBracketText = processedQuery.substring(0, match.index);
+                    const afterBracketText = processedQuery.substring(match.index + originalBracket.length);
+                    
+                    processedQueryAfterBrackets = beforeBracketText + replacement + afterBracketText;
+                    log(`   替换后的查询: ${processedQueryAfterBrackets}`);
+                }
+            }
+            
+            // 步骤3: AND逻辑处理
+            log('\n📋 步骤3: AND逻辑处理');
+            const andConditions = processedQueryAfterBrackets.split(" AND ");
+            log(`   分割后的AND条件: ${JSON.stringify(andConditions)}`);
+            
+            const dorisConditions = [];
+            andConditions.forEach((cond, index) => {
+                const trimmedCond = cond.trim();
+                if (!trimmedCond) return;
+                
+                log(`   处理条件 ${index + 1}: "${trimmedCond}"`);
+                
+                // 检查是否已经处理过
+                if (trimmedCond.includes("MATCH_PHRASE") || trimmedCond.includes("REGEXP") || trimmedCond.includes("=") || trimmedCond.startsWith("(")) {
+                    log(`   ✅ 条件已处理，直接添加: "${trimmedCond}"`);
+                    dorisConditions.push(trimmedCond);
+                    return;
+                }
+                
+                // 检查是否包含冒号
+                if (trimmedCond.includes(":")) {
+                    log(`   🔍 检测到冒号，解析字段和值: "${trimmedCond}"`);
+                    const { field, value } = parseFieldValue(trimmedCond);
+                    const dorisCondition = buildDorisCondition(field, value);
+                    if (dorisCondition) {
+                        dorisConditions.push(dorisCondition);
+                        log(`   ✅ 添加Doris条件: "${dorisCondition}"`);
+                    }
+                } else {
+                    log(`   🔍 无冒号，作为纯值处理: "${trimmedCond}"`);
+                    const dorisCondition = buildDorisCondition(null, trimmedCond);
+                    if (dorisCondition) {
+                        dorisConditions.push(dorisCondition);
+                        log(`   ✅ 添加Doris条件: "${dorisCondition}"`);
+                    }
+                }
+            });
+            
+            const finalResult = dorisConditions.join(" AND ");
+            log(`\n📋 最终结果: ${finalResult}`);
+            
+            // 分析问题
+            analyzeProblem(finalResult);
+            
+            // 显示步骤分析
+            showStepAnalysis();
+        }
+
+        // 显示最终SQL
+        function showFinalSQL() {
+            const testQuery = 'msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")';
+            const result = convertQueryToCondition(testQuery);
+            
+            document.getElementById('sql-content').textContent = result;
+            document.getElementById('final-sql').style.display = 'block';
+            
+            log('🔍 查看最终SQL完成');
+        }
+
+        // 分析问题
+        function analyzeProblem(finalSQL) {
+            let problems = [];
+            
+            if (finalSQL.includes('msg :msg')) {
+                problems.push('检测到重复字段名: msg :msg');
+            }
+            if (finalSQL.includes('msg:msg')) {
+                problems.push('检测到重复字段名: msg:msg');
+            }
+            if (finalSQL.includes('AND msg')) {
+                problems.push('检测到意外的AND前缀: AND msg');
+            }
+            
+            if (problems.length > 0) {
+                document.getElementById('error-content').innerHTML = problems.map(p => `<div>❌ ${p}</div>`).join('');
+                document.getElementById('error-analysis').style.display = 'block';
+            }
+        }
+
+        // 显示步骤分析
+        function showStepAnalysis() {
+            const stepContent = document.getElementById('step-content');
+            stepContent.innerHTML = `
+                <div><strong>步骤1:</strong> 变量替换 - 处理Grafana宏</div>
+                <div><strong>步骤2:</strong> 括号内OR逻辑处理 - 提取字段名并替换</div>
+                <div><strong>步骤3:</strong> AND逻辑处理 - 分割并处理剩余条件</div>
+                <div><strong>问题定位:</strong> 查看详细日志找出重复字段名的来源</div>
+            `;
+            document.getElementById('step-analysis').style.display = 'block';
+        }
+
+        // 完整的convertQueryToCondition函数（用于对比）
+        function convertQueryToCondition(query) {
+            if (!query) return "";
+            
+            log("🔍 开始转换查询条件:", query);
+
+            // 处理变量替换（保留Grafana宏）
+            const processedQuery = query.replace(/\$\{(\w+)\}/g, "${$1}");
+
+            // 解析复杂的逻辑查询
+            function parseLogicalQuery(queryStr) {
+                log("🔍 解析逻辑查询:", queryStr);
+                
+                // 处理括号内的OR逻辑
+                const orPattern = /\(([^()]+)\)/g;
+                let processedQuery = queryStr;
+                let match;
+                
+                // 先处理所有括号内的OR逻辑
+                while ((match = orPattern.exec(queryStr)) !== null) {
+                    const bracketContent = match[1];
+                    log("🔍 发现括号内容:", bracketContent);
+                    
+                    // 检查括号内是否包含OR
+                    if (bracketContent.includes(" OR ")) {
+                        const orConditions = bracketContent.split(" OR ").map(c => c.trim());
+                        log("🔍 OR条件:", orConditions);
+                        
+                        // 检查括号前是否有字段名（如 msg:("value1" OR "value2")）
+                        // 使用更可靠的方法：从当前匹配位置向前查找最近的字段名
+                        let fieldName = null;
+                        
+                        // 从括号开始位置向前查找最近的冒号
+                        const beforeBracket = queryStr.substring(0, match.index);
+                        const lastColonIndex = beforeBracket.lastIndexOf(":");
+                        
+                        if (lastColonIndex !== -1) {
+                            // 从冒号前开始，向前查找最后一个完整的字段名
+                            const beforeColon = beforeBracket.substring(0, lastColonIndex).trim();
+                            
+                            // 如果beforeColon为空，说明冒号就在开头，没有字段名
+                            if (beforeColon) {
+                                // 查找最后一个空格，如果找到则取空格后的部分作为字段名
+                                const lastSpaceIndex = beforeColon.lastIndexOf(" ");
+                                if (lastSpaceIndex !== -1) {
+                                    fieldName = beforeColon.substring(lastSpaceIndex + 1).trim();
+                                } else {
+                                    fieldName = beforeColon;
+                                }
+                                
+                                // 验证字段名是否有效（不包含冒号等特殊字符）
+                                if (fieldName && (fieldName.includes(":") || fieldName.includes(" ") || fieldName.includes("("))) {
+                                    // 如果字段名包含特殊字符，说明提取错误，重新处理
+                                    const parts = beforeColon.split(" ");
+                                    fieldName = parts[parts.length - 1] || null;
+                                    
+                                    // 再次验证
+                                    if (fieldName && (fieldName.includes(":") || fieldName.includes(" ") || fieldName.includes("("))) {
+                                        fieldName = null; // 如果还是无效，设为null
+                                    }
+                                }
+                            }
+                            
+                            log("🔍 检测到括号前的字段名:", fieldName);
+                        }
+                        
+                        // 构建Doris条件
+                        let replacement;
+                        if (fieldName) {
+                            // 如果有字段名，优先使用REGEXP，否则使用OR组合
+                            const values = orConditions.map(cond => {
+                                // 去除引号
+                                if (cond.startsWith('"') && cond.endsWith('"')) {
+                                    return cond.substring(1, cond.length - 1);
+                                }
+                                return cond;
+                            });
+                            
+                            // 检查是否可以使用REGEXP（所有值都不包含特殊字符）
+                            const canUseRegexp = values.every(val => 
+                                !val.includes('*') && !val.includes('?') && !val.includes('+') && 
+                                !val.includes('[') && !val.includes(']') && !val.includes('|')
+                            );
+                            
+                            if (canUseRegexp) {
+                                // 使用REGEXP，用|分隔多个值
+                                const regexpValue = values.join('|');
+                                replacement = `${fieldName} REGEXP "${regexpValue}"`;
+                                log("🔍 使用REGEXP:", replacement);
+                            } else {
+                                // 使用OR组合
+                                const dorisOrConditions = values.map(value => 
+                                    `${fieldName} MATCH_PHRASE("${value}")`
+                                );
+                                replacement = `(${dorisOrConditions.join(" OR ")})`;
+                                log("🔍 使用OR组合:", replacement);
+                            }
+                        } else {
+                            // 没有字段名，使用OR组合
+                            const dorisOrConditions = orConditions.map(condition => {
+                                const { field, value } = parseFieldValue(condition);
+                                return buildDorisCondition(field, value);
+                            }).filter(Boolean);
+                            replacement = `(${dorisOrConditions.join(" OR ")})`;
+                        }
+                        
+                        // 将括号内容替换为Doris条件
+                        // 使用更精确的替换方法，避免字段名重复
+                        const originalBracket = match[0]; // 完整的括号内容，包括括号
+                        const beforeBracketText = queryStr.substring(0, match.index);
+                        const afterBracketText = queryStr.substring(match.index + originalBracket.length);
+                        
+                        // 重新构建查询字符串，确保字段名不重复
+                        processedQuery = beforeBracketText + replacement + afterBracketText;
+                        
+                        log("🔍 替换括号内容:", replacement);
+                        log("🔍 替换后的查询:", processedQuery);
+                    }
+                }
+                
+                // 处理剩余的AND逻辑
+                const andConditions = processedQuery.split(" AND ");
+                const dorisConditions = [];
+                
+                log("🔍 处理AND逻辑，分割后的条件:", andConditions);
+                
+                andConditions.forEach((cond, index) => {
+                    const trimmedCond = cond.trim();
+                    if (!trimmedCond) return;
+                    
+                    log(`🔍 处理条件 ${index + 1}: "${trimmedCond}"`);
+                    
+                    // 如果条件已经被处理过（包含Doris语法），直接添加
+                    if (trimmedCond.includes("MATCH_PHRASE") || trimmedCond.includes("REGEXP") || trimmedCond.includes("=") || trimmedCond.startsWith("(")) {
+                        log(`✅ 条件已处理，直接添加: "${trimmedCond}"`);
+                        dorisConditions.push(trimmedCond);
+                        return;
+                    }
+                    
+                    // 检查是否包含冒号（可能是未处理的字段:值格式）
+                    if (trimmedCond.includes(":")) {
+                        log(`🔍 检测到冒号，解析字段和值: "${trimmedCond}"`);
+                        // 解析字段和值
+                        const { field, value } = parseFieldValue(trimmedCond);
+                        const dorisCondition = buildDorisCondition(field, value);
+                        if (dorisCondition) {
+                            dorisConditions.push(dorisCondition);
+                            log(`✅ 添加Doris条件: "${dorisCondition}"`);
+                        }
+                    } else {
+                        log(`🔍 无冒号，作为纯值处理: "${trimmedCond}"`);
+                        // 没有冒号，可能是纯值，使用默认字段
+                        const dorisCondition = buildDorisCondition(null, trimmedCond);
+                        if (dorisCondition) {
+                            dorisConditions.push(dorisCondition);
+                            log(`✅ 添加Doris条件: "${dorisCondition}"`);
+                        }
+                    }
+                });
+                
+                const result = dorisConditions.join(" AND ");
+                log("🔍 AND逻辑处理完成，结果:", result);
+                return result;
+            }
+            
+            // 解析字段和值的函数
+            function parseFieldValue(condition) {
+                // 匹配模式：field:"value" 或 field:value
+                const colonIndex = condition.indexOf(":");
+                if (colonIndex === -1) {
+                    // 没有字段名，整个条件作为值
+                    return { field: null, value: condition };
+                }
+
+                const field = condition.substring(0, colonIndex).trim();
+                let value = condition.substring(colonIndex + 1).trim();
+
+                // 检查值是否被引号包围
+                if (value.startsWith('"') && value.endsWith('"')) {
+                    // 去除引号并处理转义字符
+                    value = value.substring(1, value.length - 1);
+                    // 处理转义字符：将 \\ 转换为 \，将 \" 转换为 "
+                    value = value.replace(/\\\\/g, "\\").replace(/\\"/g, '"');
+                } else {
+                    // 没有引号，检查是否为正则表达式
+                    if (
+                        value.includes("*") ||
+                        value.includes("?") ||
+                        value.includes("+") ||
+                        value.includes("[") ||
+                        value.includes("]")
+                    ) {
+                        // 可能是正则表达式，保持原样
+                        log("🔍 检测到可能的正则表达式:", value);
+                    }
+                }
+
+                return { field, value };
+            }
+            
+            // 构建Doris条件的函数
+            function buildDorisCondition(field, value) {
+                log("🔍 构建Doris条件:", { field, value });
+
+                // 验证字段名安全性
+                if (field && !isValidFieldName(field)) {
+                    log(`⚠️ 无效字段名: ${field}`);
+                    return null;
+                }
+
+                // 如果没有字段名，使用默认字段
+                const targetField = field || "message";
+
+                // 检查是否为正则表达式
+                if (
+                    value.includes("*") ||
+                    value.includes("?") ||
+                    value.includes("+") ||
+                    value.includes("[") ||
+                    value.includes("]") ||
+                    value.includes("|")
+                ) {
+                    // 使用REGEXP
+                    return `${targetField} REGEXP "${value}"`;
+                }
+
+                // 检查是否为已知字段
+                if (KNOWN_FIELDS.includes(targetField)) {
+                    // 已知字段使用等号
+                    return `${targetField} = "${value}"`;
+                }
+
+                // 其他字段使用MATCH_PHRASE
+                return `${targetField} MATCH_PHRASE("${value}")`;
+            }
+
+            // 使用新的解析逻辑
+            const result = parseLogicalQuery(processedQuery);
+            log("🔍 最终转换结果:", result);
+            return result;
+        }
+
+        // 页面加载完成后的检查
+        window.addEventListener('load', () => {
+            log('页面加载完成');
+            log('准备调试SQL生成过程...');
+        });
+    </script>
+</body>
+</html>

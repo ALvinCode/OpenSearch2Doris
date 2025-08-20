@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单修复测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+        .result { background: #e8f5e8; border: 1px solid #28a745; padding: 15px; margin: 10px 0; }
+        .error { background: #f8d7da; border: 1px solid #dc3545; padding: 15px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 简单修复测试</h1>
+        <p>测试字段名重复问题的修复效果。</p>
+        
+        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; margin: 10px 0;">
+            <strong>测试查询:</strong><br>
+            <code>msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")</code>
+        </div>
+        
+        <button class="button" onclick="testFix()">测试修复</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function testFix() {
+            const query = 'msg:("walk in trackPageEventWhenFirstLoad" OR "walk in handleRouteChangeComplete")';
+            console.log('🧪 测试查询:', query);
+            
+            // 模拟修复后的逻辑
+            const orPattern = /\(([^()]+)\)/g;
+            let match;
+            let processedQuery = query;
+            
+            while ((match = orPattern.exec(query)) !== null) {
+                const bracketContent = match[1];
+                console.log('🔍 发现括号内容:', bracketContent);
+                
+                if (bracketContent.includes(" OR ")) {
+                    const orConditions = bracketContent.split(" OR ").map(c => c.trim());
+                    console.log('🔍 OR条件:', orConditions);
+                    
+                    // 提取字段名
+                    const beforeBracket = query.substring(0, match.index);
+                    const lastColonIndex = beforeBracket.lastIndexOf(":");
+                    console.log('🔍 括号前内容:', beforeBracket);
+                    console.log('🔍 最后一个冒号位置:', lastColonIndex);
+                    
+                    let fieldName = null;
+                    if (lastColonIndex !== -1) {
+                        const beforeColon = beforeBracket.substring(0, lastColonIndex).trim();
+                        const lastSpaceIndex = beforeColon.lastIndexOf(" ");
+                        
+                        if (lastSpaceIndex !== -1) {
+                            fieldName = beforeColon.substring(lastSpaceIndex + 1).trim();
+                        } else {
+                            fieldName = beforeColon;
+                        }
+                        
+                        console.log('🔍 提取的字段名:', fieldName);
+                    }
+                    
+                    // 构建替换内容
+                    let replacement;
+                    if (fieldName) {
+                        const values = orConditions.map(cond => {
+                            if (cond.startsWith('"') && cond.endsWith('"')) {
+                                return cond.substring(1, cond.length - 1);
+                            }
+                            return cond;
+                        });
+                        
+                        const regexpValue = values.join('|');
+                        replacement = `${fieldName} REGEXP "${regexpValue}"`;
+                        console.log('🔍 使用REGEXP:', replacement);
+                    }
+                    
+                    // 关键修复：替换时确保不包含字段名和冒号
+                    const originalBracket = match[0];
+                    
+                    // 找到字段名的开始位置（冒号前最后一个空格的位置，如果没有空格则从开头开始）
+                    const beforeBracketForReplacement = query.substring(0, match.index);
+                    const lastColonIndexForReplacement = beforeBracketForReplacement.lastIndexOf(":");
+                    
+                    if (lastColonIndexForReplacement !== -1) {
+                        // 找到字段名的开始位置
+                        const beforeColon = beforeBracketForReplacement.substring(0, lastColonIndexForReplacement).trim();
+                        let fieldStartIndex;
+                        
+                        if (beforeColon === "") {
+                            // 字段名从开头开始，如 "msg:"
+                            fieldStartIndex = 0;
+                        } else {
+                            // 字段名前面有内容，找到最后一个空格
+                            const lastSpaceIndex = beforeColon.lastIndexOf(" ");
+                            fieldStartIndex = lastSpaceIndex !== -1 ? lastSpaceIndex + 1 : 0;
+                        }
+                        
+                        // 从字段名开始位置到括号结束位置，全部替换
+                        const beforeField = query.substring(0, fieldStartIndex);
+                        const afterBracketText = query.substring(match.index + originalBracket.length);
+                        
+                        // 重新构建查询字符串，确保字段名不重复
+                        processedQuery = beforeField + replacement + afterBracketText;
+                        
+                        // 调试日志
+                        console.log("🔍 字段名替换调试:");
+                        console.log("  - lastColonIndexForReplacement:", lastColonIndexForReplacement);
+                        console.log("  - fieldStartIndex:", fieldStartIndex);
+                        console.log("  - beforeField:", `"${beforeField}"`);
+                        console.log("  - replacement:", `"${replacement}"`);
+                        console.log("  - afterBracketText:", `"${afterBracketText}"`);
+                        console.log("  - 最终结果:", `"${processedQuery}"`);
+                    } else {
+                        // 如果没有找到字段名，使用原来的替换逻辑
+                        const beforeBracketText = query.substring(0, match.index);
+                        const afterBracketText = query.substring(match.index + originalBracket.length);
+                        processedQuery = beforeBracketText + replacement + afterBracketText;
+                    }
+                }
+            }
+            
+            // 显示结果
+            const resultDiv = document.getElementById('result');
+            const hasDuplicateField = processedQuery.includes('msgmsg') || processedQuery.includes('msg:msg');
+            
+            resultDiv.className = hasDuplicateField ? 'error' : 'result';
+            resultDiv.innerHTML = `
+                <h4>${hasDuplicateField ? '❌ 修复失败' : '✅ 修复成功'}</h4>
+                <div><strong>输入:</strong> <code>${query}</code></div>
+                <div><strong>输出:</strong> <code>${processedQuery}</code></div>
+                <div><strong>状态:</strong> ${hasDuplicateField ? '仍然有重复字段名' : '无重复字段名，修复成功！'}</div>
+            `;
+            
+            console.log('✅ 测试完成，结果:', processedQuery);
+        }
+
+        window.addEventListener('load', () => {
+            console.log('页面加载完成，准备测试...');
+        });
+    </script>
+</body>
+</html>
