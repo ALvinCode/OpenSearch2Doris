@@ -25,83 +25,13 @@ function getSQLTemplates() {
     return {
       SQL_TEMPLATES: window.SQL_TEMPLATES,
       KNOWN_FIELDS: window.KNOWN_FIELDS,
-      DEFAULT_CONFIG: window.DEFAULT_CONFIG
+      DEFAULT_CONFIG: window.DEFAULT_CONFIG,
+      PANEL_STRATEGIES: window.PANEL_STRATEGIES
     };
   }
   
-  // 内联配置作为备选方案
-  return {
-    SQL_TEMPLATES: {
-      "Time series": `SELECT * FROM (SELECT
-  $__timeGroup(timestamp, \${interval}, 0) as time,
-  NDV(get_json_string(message, '$.\${deviceIdField}')) AS "\${alias}"
-FROM
-  logs.\${DorisSources}
-WHERE
-  \${queryCondition}
-  AND $__timeFilter(timestamp)
-GROUP BY
-  time
-UNION ALL SELECT 0,0) temp
-ORDER BY
-  time ASC;`,
-
-      Stat: `SELECT * FROM (SELECT
-  $__timeGroup(timestamp, \${interval}, 0) as time,
-  NDV(get_json_string(message, '$.\${deviceIdField}')) AS "\${alias}"
-FROM
-  logs.\${DorisSources}
-WHERE
-  \${queryCondition}
-  AND $__timeFilter(timestamp)
-GROUP BY
-  time
-UNION ALL SELECT 0,0) temp
-ORDER BY
-  time ASC;`,
-
-      "Pie chart": `SELECT
-  get_json_string(message, '$.\${groupByField}') AS "\${groupByField}",
-  NDV(get_json_string(message, '$.\${deviceIdField}')) AS deviceId
-FROM logs.\${DorisSources}
-WHERE \${queryCondition}
-  AND $__timeFilter(timestamp)
-GROUP BY \${groupByField}
-ORDER BY deviceId DESC
-LIMIT \${limit};`,
-
-      "Echarts": `SELECT * FROM (SELECT
-  $__timeGroup(timestamp, \${interval}, 0) as time,
-  NDV(get_json_string(message, '$.\${deviceIdField}')) AS "\${alias}"
-FROM
-  logs.\${DorisSources}
-WHERE
-  \${queryCondition}
-  AND $__timeFilter(timestamp)
-GROUP BY
-  time
-UNION ALL SELECT 0,0) temp
-ORDER BY
-  time ASC;`,
-    },
-    KNOWN_FIELDS: [
-      "datetime_local",
-      "timestamp",
-      "application_name",
-      "project_name",
-      "logger",
-      "thread",
-      "level",
-      "bj_timestamp",
-    ],
-    DEFAULT_CONFIG: {
-      interval: "1m",
-      limit: 100,
-      deviceIdField: "deviceId",
-      groupByField: "category",
-      alias: "Device Count",
-    }
-  };
+  // 如果没有外部模板配置，抛出错误
+  throw new Error("SQL模板配置未加载，请确保 sql-templates.js 已正确加载");
 }
 
 // 获取配置
@@ -869,12 +799,6 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
     console.log("🔍 查询内容:", queryConfig.query);
     console.log("🔍 查询内容类型:", typeof queryConfig.query);
 
-    // 获取模板
-    const template = SQL_TEMPLATES[globalVars.panelType];
-    if (!template) {
-      throw new Error(`Unsupported panel type: ${globalVars.panelType}`);
-    }
-
     // 验证和清理配置值
     function validateAndCleanValue(value, defaultValue, type = "string") {
       if (value === null || value === undefined) return defaultValue;
@@ -922,6 +846,17 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
       ),
     };
 
+    // 使用策略模式获取模板
+    const strategy = window.PANEL_STRATEGIES?.[globalVars.panelType] || 
+                    config.PANEL_STRATEGIES?.[globalVars.panelType];
+    
+    if (!strategy) {
+      throw new Error(`Unsupported panel type: ${globalVars.panelType}`);
+    }
+    
+    // 获取基础模板
+    let template = strategy.getTemplate(replacements);
+
     console.log("🔍 替换变量:", replacements);
 
     // 对所有变量值做HTML实体解码
@@ -960,33 +895,11 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
     // 应用transform配置
     sql = applyTransforms(sql, transformConfigs);
     
-    // 对Stat类型特殊处理：检查查询配置中的Size配置，如果有则添加LIMIT子句
-    if (globalVars.panelType === "Stat") {
-      console.log("🔍 检测到Stat类型，检查查询配置中的Size配置");
-      
-      // 查找查询配置中的Size配置
-      let hasSizeLimit = false;
-      let sizeValue = null;
-      
-      queryConfigs.forEach((queryConfig, index) => {
-        if (queryConfig.size && queryConfig.size > 0) {
-          hasSizeLimit = true;
-          sizeValue = queryConfig.size;
-          console.log(`🔍 查询配置${index + 1}中找到Size配置:`, sizeValue);
-        }
-      });
-      
-      if (hasSizeLimit && sizeValue) {
-        console.log("🔍 为Stat类型添加LIMIT子句:", sizeValue);
-        // 移除末尾的分号
-        sql = sql.replace(/;$/, '');
-        // 添加LIMIT子句
-        sql += `\nLIMIT\n  ${sizeValue};`;
-        console.log("🔍 添加LIMIT后的SQL:", sql);
-      } else {
-        console.log("🔍 Stat类型未找到Size配置，不添加LIMIT子句");
-      }
-    }
+    // 使用策略模式处理模板
+    const currentIndex = queryConfigs.findIndex(qc => qc === queryConfig);
+    sql = strategy.processTemplate(sql, replacements, queryConfigs, currentIndex);
+    
+    console.log(`🔍 ${globalVars.panelType} 模板处理完成:`, sql);
     
     // 在SQL开头添加查询名称注释
     // const queryName = queryConfig.name || `查询 ${queryConfig.index + 1}`;
