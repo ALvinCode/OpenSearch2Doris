@@ -53,12 +53,13 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("message", (event) => {
     if (event.data.type === "conversionResults") {
       console.log("📥 收到转换结果:", event.data.data);
-      const { sqlList, queryCount, transformCount, lastConvertTime } =
+      const { sqlList, queryNames, queryCount, transformCount, lastConvertTime } =
         event.data.data;
 
       // 存储转换结果
       window.conversionResults = {
         sqlList: sqlList || [],
+        queryNames: queryNames || [],
         queryCount: queryCount || 0,
         transformCount: transformCount || 0,
         lastConvertTime: lastConvertTime || new Date().toISOString(),
@@ -110,13 +111,17 @@ document.addEventListener("DOMContentLoaded", () => {
       sqlItem.className = "sql-item";
       // 解码SQL
       sql = decodeHtmlEntities(sql);
+      
+      // 获取查询名称，如果没有则使用默认名称
+      const queryName = window.conversionResults?.queryNames?.[index] || `查询 ${index + 1}`;
+      
       sqlItem.innerHTML = `
         <div class="sql-header">
           <div class="sql-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a6cf7" stroke-width="2">
               <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
             </svg>
-            查询 ${index + 1}
+            ${queryName}
           </div>
           <div class="sql-actions">
             <button class="sql-action-btn copy" data-index="${index}">

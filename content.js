@@ -813,7 +813,7 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
         wrappedValue = `"${fullFieldString}"`;
       } else {
         // 默认使用双引号包裹
-        wrappedValue = `"${fullFieldString}"`;
+        wrappedValue = `'${fullFieldString}'`;
       }
       
       return `message MATCH_PHRASE(${wrappedValue})`;
@@ -987,6 +987,11 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
         console.log("🔍 Stat类型未找到Size配置，不添加LIMIT子句");
       }
     }
+    
+    // 在SQL开头添加查询名称注释
+    // const queryName = queryConfig.name || `查询 ${queryConfig.index + 1}`;
+    // const commentHeader = `-- 查询名称: ${queryName}\n-- 原始查询: ${queryConfig.query?.content || queryConfig.query}\n\n`;
+    // sql = commentHeader + sql;
     
     dorisSQLs.push(sql);
   });
@@ -1173,6 +1178,7 @@ function showConvertButton() {
               type: "conversionResults",
               data: {
                 sqlList: dorisSQLs,
+                queryNames: queryConfigs.map(config => config.name || `查询 ${config.index + 1}`),
                 queryCount: queryConfigs.length,
                 transformCount: transformConfigs.length,
                 lastConvertTime: new Date().toISOString(),
