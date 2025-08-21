@@ -819,6 +819,21 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
       return typeof value === "string" ? value : String(value || defaultValue);
     }
 
+    // 提取 Size 值的函数
+    function extractSizeFromRawData(rawData) {
+      if (!rawData || !rawData.buttons) return null;
+      
+      for (const button of rawData.buttons) {
+        if (button.includes("Size:")) {
+          const sizeMatch = button.match(/Size:\s*(\d+)/);
+          if (sizeMatch) {
+            return parseInt(sizeMatch[1], 10);
+          }
+        }
+      }
+      return null;
+    }
+
     // 准备替换变量（只替换需要转换的变量，保留Dashboard变量）
     const replacements = {
       // 只替换需要转换的变量，不替换Dashboard变量
@@ -844,6 +859,7 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
         "timestamp",
         "identifier"
       ),
+      limit: extractSizeFromRawData(queryConfig.rawData) || DEFAULT_CONFIG.limit,
     };
 
     // 使用策略模式获取模板
