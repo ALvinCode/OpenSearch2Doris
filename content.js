@@ -793,8 +793,30 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
         return `${targetField} = "${value}"`;
       }
 
-      // 其他字段使用MATCH_PHRASE
-      return `${targetField} MATCH_PHRASE("${value}")`;
+      // 检查字段是否为 msg 或 message
+      if (targetField === "msg" || targetField === "message") {
+        // 使用MATCH_PHRASE
+        return `${targetField} MATCH_PHRASE("${value}")`;
+      }
+
+      // 对于其他非已知字段，使用 message 字段进行 MATCH_PHRASE
+      // 将整个字段字符串作为值，例如：region:"SG" -> message MATCH_PHRASE('region:"SG"')
+      const fullFieldString = `${targetField}:"${value}"`;
+      
+      // 处理引号问题：避免引号冲突
+      let wrappedValue;
+      if (fullFieldString.startsWith('"') && fullFieldString.endsWith('"')) {
+        // 如果最外层是双引号，则使用单引号包裹
+        wrappedValue = `'${fullFieldString}'`;
+      } else if (fullFieldString.startsWith("'") && fullFieldString.endsWith("'")) {
+        // 如果最外层是单引号，则使用双引号包裹
+        wrappedValue = `"${fullFieldString}"`;
+      } else {
+        // 默认使用双引号包裹
+        wrappedValue = `"${fullFieldString}"`;
+      }
+      
+      return `message MATCH_PHRASE(${wrappedValue})`;
     }
 
     // 使用新的解析逻辑
