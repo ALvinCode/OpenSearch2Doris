@@ -862,6 +862,13 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
       limit: extractSizeFromRawData(queryConfig.rawData) || DEFAULT_CONFIG.limit,
     };
 
+    // 调试日志：检查 limit 值
+    console.log("🔍 调试 limit 值:");
+    console.log("  - queryConfig.rawData:", queryConfig.rawData);
+    console.log("  - 提取的 Size 值:", extractSizeFromRawData(queryConfig.rawData));
+    console.log("  - DEFAULT_CONFIG.limit:", DEFAULT_CONFIG.limit);
+    console.log("  - 最终 limit 值:", replacements.limit);
+
     // 使用策略模式获取模板
     const strategy = window.PANEL_STRATEGIES?.[globalVars.panelType] || 
                     config.PANEL_STRATEGIES?.[globalVars.panelType];
@@ -916,6 +923,18 @@ function convertToDorisSQL(globalVars, queryConfigs, transformConfigs) {
     sql = strategy.processTemplate(sql, replacements, queryConfigs, currentIndex);
     
     console.log(`🔍 ${globalVars.panelType} 模板处理完成:`, sql);
+    
+    // 策略处理完成后，再次进行变量替换（处理新模板中的变量）
+    console.log("🔍 策略处理后再次进行变量替换...");
+    for (const [key, value] of Object.entries(replacements)) {
+      const beforeReplace = sql;
+      sql = sql.split(`\${${key}}`).join(value);
+      if (beforeReplace !== sql) {
+        console.log(`🔍 策略处理后替换变量 ${key}: "${value}"`);
+      }
+    }
+    
+    console.log("🔍 最终SQL:", sql);
     
     // 在SQL开头添加查询名称注释
     // const queryName = queryConfig.name || `查询 ${queryConfig.index + 1}`;
