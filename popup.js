@@ -118,16 +118,27 @@ document.addEventListener("DOMContentLoaded", () => {
       sqlItem.innerHTML = `
         <div class="sql-header">
           <div class="sql-title">
+            <button class="collapse-toggle" data-index="${index}">
+              <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a6cf7" stroke-width="2">
               <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
             </svg>
-            ${queryName}
+            <span class="title-text">${queryName}</span>
+            <button class="copy-title-btn" data-index="${index}" title="复制标题">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
           </div>
           <div class="sql-actions">
             <button class="sql-action-btn copy" data-index="${index}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 0 2 2v1"></path>
               </svg>
               复制SQL
             </button>
@@ -139,8 +150,34 @@ document.addEventListener("DOMContentLoaded", () => {
             </button>
           </div>
         </div>
-        <div class="sql-content" data-index="${index}"></div>
+        <div class="sql-content collapsed" data-index="${index}"></div>
       `;
+      // 折叠/展开按钮事件
+      const collapseToggle = sqlItem.querySelector(".collapse-toggle");
+      collapseToggle.addEventListener("click", function () {
+        const sqlContent = sqlItem.querySelector(".sql-content");
+        const collapseIcon = this.querySelector(".collapse-icon");
+        
+        if (sqlContent.classList.contains("collapsed")) {
+          // 展开
+          sqlContent.classList.remove("collapsed");
+          collapseIcon.style.transform = "rotate(180deg)";
+          this.title = "收起";
+        } else {
+          // 折叠
+          sqlContent.classList.add("collapsed");
+          collapseIcon.style.transform = "rotate(0deg)";
+          this.title = "展开";
+        }
+      });
+
+      // 复制标题按钮事件
+      const copyTitleBtn = sqlItem.querySelector(".copy-title-btn");
+      copyTitleBtn.addEventListener("click", function () {
+        const titleText = sqlItem.querySelector(".title-text").textContent;
+        handleCopyTitle(titleText, this);
+      });
+
       // 全屏/恢复按钮事件
       sqlItem
         .querySelector(".sql-action-btn.fullscreen")

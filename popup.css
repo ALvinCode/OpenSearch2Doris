@@ -195,6 +195,51 @@ h1 {
   align-items: center;
   gap: 8px;
   font-size: 0.95rem;
+  position: relative;
+}
+
+.collapse-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.collapse-toggle:hover {
+  background: rgba(74, 108, 247, 0.1);
+}
+
+.collapse-icon {
+  transition: transform 0.2s ease;
+  color: var(--text-light);
+}
+
+.title-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.copy-title-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.6;
+}
+
+.copy-title-btn:hover {
+  opacity: 1;
+  background: rgba(74, 108, 247, 0.1);
 }
 
 .sql-actions {
@@ -237,6 +282,14 @@ h1 {
   overflow: auto;
   padding: 15px;
   background: white;
+  transition: all 0.3s ease;
+}
+
+.sql-content.collapsed {
+  max-height: 0;
+  min-height: 0;
+  padding: 0 15px;
+  overflow: hidden;
 }
 
 .sql-content::after {
