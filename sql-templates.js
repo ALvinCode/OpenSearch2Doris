@@ -88,7 +88,39 @@ UNION ALL SELECT 0,0) temp
 ORDER BY
   time ASC
 LIMIT
-  \${sizeLimit};`
+  \${sizeLimit};`,
+
+  // Table 基础模板
+  TABLE_BASE: `SELECT
+  timestamp AS time,
+  *
+FROM
+  logs.\${DorisSources}
+WHERE
+  \${queryCondition}
+  AND $__timeFilter(timestamp)
+ORDER BY
+  time DESC
+LIMIT
+  \${limit};`,
+
+  // Table 聚合模板
+  TABLE_AGGREGATE: `SELECT
+  $__timeGroup(timestamp, \${interval}, 0) as time,
+  NDV(get_json_string(message, '$.\${deviceIdField}')) AS device_count,
+  get_json_string(message, '$.\${groupByField}') AS category,
+  COUNT(*) AS total_records
+FROM
+  logs.\${DorisSources}
+WHERE
+  \${queryCondition}
+  AND $__timeFilter(timestamp)
+GROUP BY
+  time, category
+ORDER BY
+  time DESC, device_count DESC
+LIMIT
+  \${limit};`
 };
 
 // 策略模式：面板类型处理器
@@ -159,6 +191,32 @@ const PANEL_STRATEGIES = {
       console.log('barchart 使用了默认的聚合数据模板')
       // 使用聚合数据模板
       return BASE_TEMPLATES.BAR_CHART_AGGREGATE;
+    }
+  },
+
+  // Table 策略
+  "Table": {
+    getTemplate: (replacements) => BASE_TEMPLATES.TABLE_BASE, // 默认模板
+    processTemplate: (template, replacements, queryConfigs, currentIndex) => {
+      console.log('table 进入processTemplate')
+      // 检查当前查询配置的 Metric 类型
+      const currentConfig = queryConfigs[currentIndex];
+      const isRawData1 = currentConfig?.rawData;
+
+      const currentMetrics = currentConfig?.metrics || [];
+      const isRawData2 = currentMetrics.some(metric => 
+        metric.type === "raw Data" || metric.type === "rawData"
+      );
+      
+      if (isRawData1 || isRawData2) {
+        console.log('table 使用原始数据模板')
+        // 使用原始数据模板
+        return BASE_TEMPLATES.TABLE_BASE;
+      }
+      
+      console.log('table 使用聚合数据模板')
+      // 使用聚合数据模板
+      return BASE_TEMPLATES.TABLE_AGGREGATE;
     }
   }
 };
