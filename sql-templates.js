@@ -104,23 +104,36 @@ ORDER BY
 LIMIT
   \${limit};`,
 
-  // Table 聚合模板
+    // Table 聚合模板
   TABLE_AGGREGATE: `SELECT
-  $__timeGroup(timestamp, \${interval}, 0) as time,
-  NDV(get_json_string(message, '$.\${deviceIdField}')) AS device_count,
-  get_json_string(message, '$.\${groupByField}') AS category,
-  COUNT(*) AS total_records
-FROM
-  logs.\${DorisSources}
-WHERE
-  \${queryCondition}
-  AND $__timeFilter(timestamp)
-GROUP BY
-  time, category
-ORDER BY
-  time DESC, device_count DESC
-LIMIT
-  \${limit};`
+    $__timeGroup(timestamp, \${interval}, 0) as time,
+    *
+  FROM
+    logs.\${DorisSources}
+  WHERE
+    \${queryCondition}
+    AND $__timeFilter(timestamp)
+  GROUP BY
+    time, category
+  ORDER BY
+    time DESC, device_count DESC
+  LIMIT
+    \${limit};`,
+
+  // Bar gauge 基础模板（聚合数据）
+  BAR_GAUGE_BASE: `SELECT * FROM (SELECT
+    $__timeGroup(timestamp, \${interval}, 0) as time,
+    NDV(get_json_string(message, '$.\${deviceIdField}')) AS "\${alias}"
+  FROM
+    logs.\${DorisSources}
+  WHERE
+    \${queryCondition}
+    AND $__timeFilter(timestamp)
+  GROUP BY
+    time
+  UNION ALL SELECT 0,0) temp
+  ORDER BY
+    time ASC;`
 };
 
 // 策略模式：面板类型处理器
@@ -217,6 +230,32 @@ const PANEL_STRATEGIES = {
       console.log('table 使用聚合数据模板')
       // 使用聚合数据模板
       return BASE_TEMPLATES.TABLE_AGGREGATE;
+    }
+  },
+
+  // Bar gauge 策略
+  "Bar gauge": {
+    getTemplate: (replacements) => BASE_TEMPLATES.BAR_GAUGE_BASE, // 默认模板
+    processTemplate: (template, replacements, queryConfigs, currentIndex) => {
+      console.log('bar gauge 进入processTemplate')
+      // 检查当前查询配置的 Metric 类型
+      const currentConfig = queryConfigs[currentIndex];
+      const isRawData1 = currentConfig?.rawData;
+
+      const currentMetrics = currentConfig?.metrics || [];
+      const isRawData2 = currentMetrics.some(metric => 
+        metric.type === "raw Data" || metric.type === "rawData"
+      );
+      
+      if (isRawData1 || isRawData2) {
+        console.log('bar gauge 使用原始数据模板')
+        // 使用原始数据模板（与 Bar chart 相同）
+        return BASE_TEMPLATES.BAR_CHART_RAW_DATA;
+      }
+      
+      console.log('bar gauge 使用聚合数据模板')
+      // 使用聚合数据模板
+      return BASE_TEMPLATES.BAR_GAUGE_BASE;
     }
   }
 };

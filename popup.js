@@ -241,6 +241,58 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
+  // 处理复制标题
+  function handleCopyTitle(titleText, button) {
+    console.log("🔍 复制标题按钮被点击:", titleText);
+    
+    // 使用现代Clipboard API
+    navigator.clipboard
+      .writeText(titleText)
+      .then(() => {
+        console.log("🔍 标题复制成功");
+        // 复制成功，显示反馈
+        const originalHTML = button.innerHTML;
+        button.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+        button.style.color = "#10b981";
+        
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.style.color = "";
+        }, 2000);
+      })
+      .catch((error) => {
+        console.log("🔍 现代API复制失败，使用降级方法:", error);
+        // 降级到旧方法
+        const textarea = document.createElement("textarea");
+        textarea.value = titleText;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+
+        console.log("🔍 降级方法复制完成");
+
+        const originalHTML = button.innerHTML;
+        button.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+        button.style.color = "#10b981";
+        
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.style.color = "";
+        }, 2000);
+      });
+  }
+
   // 处理复制SQL
   function handleCopySQL(event) {
     console.log("🔍 复制按钮被点击");
