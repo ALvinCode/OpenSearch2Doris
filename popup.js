@@ -2,6 +2,8 @@
 // 全局变量，解决作用域问题
 let currentSQLs = [];
 let renderSQLList;
+// 复制标题节流状态跟踪器
+let titleCopyStates = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   const sqlList = document.getElementById("sqlList");
@@ -85,6 +87,9 @@ document.addEventListener("DOMContentLoaded", () => {
       sqlData = [];
     }
 
+    // 重置标题复制状态跟踪器
+    titleCopyStates = {};
+
     sqlList.innerHTML = "";
 
     // 控制清除按钮的显示/隐藏
@@ -126,13 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a6cf7" stroke-width="2">
               <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
             </svg>
-            <span class="title-text">${queryName}</span>
-            <button class="copy-title-btn" data-index="${index}" title="复制标题">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-            </button>
+            <span class="title-text copyable" data-index="${index}" title="点击复制标题">${queryName}</span>
           </div>
           <div class="sql-actions">
             <button class="sql-action-btn copy" data-index="${index}">
@@ -154,6 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
       // 折叠/展开按钮事件
       const collapseToggle = sqlItem.querySelector(".collapse-toggle");
+      collapseToggle.title = "展开"; // 设置初始title为"展开"
       collapseToggle.addEventListener("click", function () {
         const sqlContent = sqlItem.querySelector(".sql-content");
         const collapseIcon = this.querySelector(".collapse-icon");
@@ -171,11 +171,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
-      // 复制标题按钮事件
-      const copyTitleBtn = sqlItem.querySelector(".copy-title-btn");
-      copyTitleBtn.addEventListener("click", function () {
-        const titleText = sqlItem.querySelector(".title-text").textContent;
-        handleCopyTitle(titleText, this);
+      // 标题点击复制事件
+      const titleText = sqlItem.querySelector(".title-text.copyable");
+      titleText.addEventListener("click", function () {
+        const titleTextContent = this.textContent;
+        const titleIndex = this.getAttribute("data-index");
+        handleCopyTitle(titleTextContent, this, titleIndex);
       });
 
       // 全屏/恢复按钮事件
@@ -241,9 +242,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // 处理复制标题
-  function handleCopyTitle(titleText, button) {
-    console.log("🔍 复制标题按钮被点击:", titleText);
+  // 处理复制标题（带节流控制）
+  function handleCopyTitle(titleText, button, titleIndex) {
+    console.log("🔍 复制标题按钮被点击:", titleText, "索引:", titleIndex);
+    
+    // 检查节流状态
+    if (titleCopyStates[titleIndex] && titleCopyStates[titleIndex].isThrottled) {
+      console.log("🔍 标题复制被节流限制，需要等待恢复");
+      return;
+    }
+    
+    // 设置节流状态
+    titleCopyStates[titleIndex] = { isThrottled: true };
     
     // 使用现代Clipboard API
     navigator.clipboard
@@ -256,13 +266,19 @@ document.addEventListener("DOMContentLoaded", () => {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
+          复制成功
         `;
         button.style.color = "#10b981";
         
         setTimeout(() => {
           button.innerHTML = originalHTML;
           button.style.color = "";
-        }, 2000);
+          // 恢复后解除节流状态
+          if (titleCopyStates[titleIndex]) {
+            titleCopyStates[titleIndex].isThrottled = false;
+          }
+          console.log("🔍 标题复制状态已恢复，可以再次复制");
+        }, 500);
       })
       .catch((error) => {
         console.log("🔍 现代API复制失败，使用降级方法:", error);
@@ -283,13 +299,19 @@ document.addEventListener("DOMContentLoaded", () => {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
+          复制成功
         `;
         button.style.color = "#10b981";
         
         setTimeout(() => {
           button.innerHTML = originalHTML;
           button.style.color = "";
-        }, 2000);
+          // 恢复后解除节流状态
+          if (titleCopyStates[titleIndex]) {
+            titleCopyStates[titleIndex].isThrottled = false;
+          }
+          console.log("🔍 标题复制状态已恢复，可以再次复制");
+        }, 500);
       });
   }
 
